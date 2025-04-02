@@ -4,7 +4,7 @@ import { MessageStatus, type Conversation, type Message, type User } from "@/typ
 
 // Update the ChatState interface to include latestMessages
 interface ChatState {
-    conversations: Conversation[];
+    conversations: Partial<Conversation[]>;
     selectedConversation: Conversation | null;
     messages: Message[];
     currentUser: User | null;
@@ -125,182 +125,425 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
     },
 
+    // fetchConversations: async () => {
+    //     set({ isLoadingConversations: true });
+    //     set({ isLoadingChannels: true });
+    //     set({ isLoadingDirectMessages: true });
+
+    //     try {
+    //         // First, get the current authenticated user
+    //         const {
+    //             data: { user },
+    //             error: userError,
+    //         } = await supabaseBrowserClient.auth.getUser();
+
+    //         if (userError || !user) {
+    //             set({ isLoadingConversations: false });
+    //             set({ isLoadingChannels: false });
+    //             set({ isLoadingDirectMessages: false });
+    //             return;
+    //         }
+
+    //         // A single query that:
+    //         //  1) Finds "ConversationParticipant" rows for this user
+    //         //  2) Pulls in the "Conversation" details
+    //         //  3) Within Conversation, fetches:
+    //         //     - the *latest* Message (sorted by createdAt desc, limited to 1)
+    //         //     - the "sender:User" for each Message
+    //         //     - all conversationParticipants, and for each participant, the "user:User"
+    //         const { data: participants, error: participantsError } =
+    //             await supabaseBrowserClient
+    //                 .from("ConversationParticipant")
+    //                 .select(
+    //                     `
+    //           id,
+    //           conversationId,
+    //           userId,
+    //           role,
+    //           isActive,
+
+    //           conversation:Conversation (
+    //             id,
+    //             organizationId,
+    //             type,
+    //             title,
+    //             description,
+    //             isArchived,
+    //             createdAt,
+    //             updatedAt,
+
+    //             messages:Message (
+    //               id,
+    //               conversationId,
+    //               senderId,
+    //               content,
+    //               messageType,
+    //               status,
+    //               isDeleted,
+    //               createdAt,
+    //               sender:User(*),
+    //               attachments:MessageAttachment (*)
+    //             ),
+
+    //             conversationParticipants:ConversationParticipant (
+    //               id,
+    //               userId,
+    //               role,
+    //               isActive,
+    //               joinedAt,
+    //               user:User(*)
+    //             )
+    //           )
+    //         `
+    //                 )
+    //                 .eq("userId", user.id)
+    //                 .eq("isActive", true)
+    //                 // Sort only the nested messages by createdAt desc
+    //                 .order("createdAt", {
+    //                     ascending: false,
+    //                     foreignTable: "conversation.messages",
+    //                 })
+    //                 // Limit the nested messages to just the top 1
+    //                 .limit(1, { foreignTable: "conversation.messages" });
+
+
+    //         if (participantsError) throw participantsError;
+
+    //         // participants will be an array of ConversationParticipant rows;
+    //         // each contains a "conversation" field with the actual conversation details
+    //         if (participants) {
+    //             // Extract the conversations from each participant object
+    //             console.log("Conversation : ", participants)
+    //             const conversations = participants.map((p) => p.conversation);
+    //             // Filter participants to only those with a conversation and extract the conversation
+    //             // const conversations = participants
+    //             //     .filter((p) => p.conversation)
+    //             //     .map((p) => p.conversation);
+
+    //             // const conversations = participants.flatMap((p) => p.conversation) as Conversation[];
+    //             // const conversations = participants.flatMap((p) => {
+    //             //     // Check if conversation is an array; if so, process each one
+    //             //     if (Array.isArray(p.conversation)) {
+    //             //         return p.conversation.map((convo: any) => {
+    //             //             // Map over messages to fix the sender field
+    //             //             const fixedMessages = convo.messages?.map((m: any) => ({
+    //             //                 ...m,
+    //             //                 // If m.sender is an array, take the first element; otherwise keep it as is
+    //             //                 sender: Array.isArray(m.sender) ? m.sender[0] : m.sender,
+    //             //             })) || [];
+
+    //             //             return {
+    //             //                 ...convo,
+    //             //                 messages: fixedMessages,
+    //             //             };
+    //             //         });
+    //             //     }
+    //             //     return [];
+    //             // }) as Conversation[];
+
+    //             set({ conversations });
+
+    //             // set({ conversations });
+
+
+    //             // console.log("participant: ", conversations)
+    //             // set({ conversations });
+
+    //             console.log("Participants : ", conversations)
+    //             // set({ conversations });
+
+    //             // Build a dictionary of latest messages per conversation
+    //             // const latestMessages: Record<string, Message> = {};
+    //             // for (const p of participants) {
+    //             //     console.log("P : ", p)
+    //             //     const convo = p.conversation;
+    //             //     console.log("Convo : ", convo)
+    //             //     // convo.messages is an array with at most 1 element (the latest)
+    //             //     const [latest] = convo?.messages || [];
+    //             //     if (latest) {
+    //             //         latestMessages[convo?.id] = latest;
+    //             //     }
+    //             // }
+    //             // set({ latestMessages });
+
+    //             // Build a dictionary of latest messages per conversation
+    //             const latestMessages: Record<string, Message> = {};
+    //             for (const p of participants) {
+    //                 console.log("P: ", p);
+    //                 // Ensure p.conversation is a single object rather than an array
+    //                 const convo = Array.isArray(p.conversation) ? p.conversation[0] : p.conversation;
+    //                 console.log("Convo: ", convo);
+    //                 // Ensure that convo exists and has a messages property
+    //                 if (convo && convo.messages) {
+    //                     // convo.messages is an array with at most 1 element (the latest)
+    //                     const [latest] = convo.messages || [];
+    //                     if (latest) {
+    //                         // Fix the sender field: if sender is an array, take the first element
+    //                         const fixedLatest: Message = {
+    //                             ...latest,
+    //                             sender: Array.isArray(latest.sender) ? latest.sender[0] : latest.sender,
+    //                         };
+    //                         latestMessages[convo.id] = fixedLatest;
+    //                     }
+    //                 }
+    //             }
+    //             set({ latestMessages });
+
+
+    //             // Optionally, fetch unread counts if you want them in the same flow:
+    //             await get().fetchUnreadCounts();
+    //         }
+    //     } catch (error) {
+    //         console.error("Error fetching conversations:", error);
+    //     } finally {
+    //         set({ isLoadingConversations: false });
+    //         set({ isLoadingChannels: false });
+    //         set({ isLoadingDirectMessages: false });
+    //     }
+    // },
+
+    // fetchConversations: async () => {
+    //     set({
+    //         isLoadingConversations: true,
+    //         isLoadingChannels: true,
+    //         isLoadingDirectMessages: true
+    //     });
+
+    //     try {
+    //         // First, get the current authenticated user
+    //         const {
+    //             data: { user },
+    //             error: userError,
+    //         } = await supabaseBrowserClient.auth.getUser();
+
+    //         if (userError || !user) {
+    //             set({
+    //                 isLoadingConversations: false,
+    //                 isLoadingChannels: false,
+    //                 isLoadingDirectMessages: false
+    //             });
+    //             return;
+    //         }
+
+    //         // A single query that:
+    //         //  1) Finds "ConversationParticipant" rows for this user
+    //         //  2) Pulls in the "Conversation" details
+    //         //  3) Within Conversation, fetches:
+    //         //     - the *latest* Message (as "latest_message" rather than an array)
+    //         //     - the "sender:User" for that Message
+    //         //     - all conversationParticipants, and for each participant, the "user:User"
+    //         const { data: participants, error: participantsError } =
+    //             await supabaseBrowserClient
+    //                 .from("ConversationParticipant")
+    //                 .select(`
+    //             id,
+    //             conversationId,
+    //             userId,
+    //             role,
+    //             isActive,
+    //             conversation:Conversation (
+    //               id,
+    //               organizationId,
+    //               type,
+    //               title,
+    //               description,
+    //               isArchived,
+    //               createdAt,
+    //               updatedAt,
+    //               latest_message:Message!Conversation_lastMessageId_fkey (
+    //                 id,
+    //                 conversationId,
+    //                 senderId,
+    //                 content,
+    //                 messageType,
+    //                 status,
+    //                 isDeleted,
+    //                 createdAt,
+    //                 sender:User(*),
+    //                 attachments:MessageAttachment(*)
+    //             ),
+    //               participants:ConversationParticipant (
+    //                 id,
+    //                 userId,
+    //                 role,
+    //                 isActive,
+    //                 joinedAt,
+    //                 user:User(*)
+    //               )
+    //             )
+    //           `)
+    //                 .eq("userId", user.id)
+    //                 .eq("isActive", true)
+    //         // Sort only the nested latest_message by createdAt desc
+    //         // .order("createdAt", {
+    //         //     ascending: false,
+    //         //     foreignTable: "conversation.latest_message",
+    //         // })
+    //         // Limit the nested latest_message to just the top 1
+    //         // .limit(1, { foreignTable: "conversation.latest_message" });
+
+    //         console.log("Participants : ", participants)
+
+    //         if (participantsError) throw participantsError;
+
+    //         if (participants) {
+    //             // Extract conversations from each participant object
+    //             const conversations = participants
+    //                 // .filter(p => p.conversation)
+    //                 .map(p => p.conversation);
+
+    //             console.log("Conversation : ", conversations)
+
+    //             set({ conversations });
+
+    //             // Build a dictionary for quick lookup of the latest message per conversation
+    //             const latestMessages = {};
+    //             for (const p of participants) {
+    //                 const convo = Array.isArray(p.conversation) ? p.conversation[0] : p.conversation;
+    //                 if (convo && convo.latest_message) {
+    //                     latestMessages[convo.id] = convo.latest_message;
+    //                 }
+    //             }
+    //             set({ latestMessages });
+
+    //             // Optionally, fetch unread counts if needed
+    //             await get().fetchUnreadCounts();
+    //         }
+    //     } catch (error) {
+    //         console.error("Error fetching conversations:", error);
+    //     } finally {
+    //         set({
+    //             isLoadingConversations: false,
+    //             isLoadingChannels: false,
+    //             isLoadingDirectMessages: false
+    //         });
+    //     }
+    // },
+
     fetchConversations: async () => {
-        set({ isLoadingConversations: true });
-        set({ isLoadingChannels: true });
-        set({ isLoadingDirectMessages: true });
+        set({
+            isLoadingConversations: true,
+            isLoadingChannels: true,
+            isLoadingDirectMessages: true,
+        });
 
         try {
-            // First, get the current authenticated user
+            // Get the current authenticated user
             const {
                 data: { user },
                 error: userError,
             } = await supabaseBrowserClient.auth.getUser();
 
             if (userError || !user) {
-                set({ isLoadingConversations: false });
-                set({ isLoadingChannels: false });
-                set({ isLoadingDirectMessages: false });
+                set({
+                    isLoadingConversations: false,
+                    isLoadingChannels: false,
+                    isLoadingDirectMessages: false,
+                });
                 return;
             }
 
-            // A single query that:
-            //  1) Finds "ConversationParticipant" rows for this user
-            //  2) Pulls in the "Conversation" details
-            //  3) Within Conversation, fetches:
-            //     - the *latest* Message (sorted by createdAt desc, limited to 1)
-            //     - the "sender:User" for each Message
-            //     - all conversationParticipants, and for each participant, the "user:User"
+            // Query for ConversationParticipant with nested Conversation data
             const { data: participants, error: participantsError } =
                 await supabaseBrowserClient
                     .from("ConversationParticipant")
-                    .select(
-                        `
-              id,
-              conversationId,
-              userId,
-              role,
-              isActive,
-      
-              conversation:Conversation (
+                    .select(`
                 id,
-                organizationId,
-                type,
-                title,
-                description,
-                isArchived,
-                createdAt,
-                updatedAt,
-      
-                messages:Message (
+                conversationId,
+                userId,
+                role,
+                isActive,
+                conversation:Conversation (
                   id,
-                  conversationId,
-                  senderId,
-                  content,
-                  messageType,
-                  status,
-                  isDeleted,
+                  organizationId,
+                  type,
+                  title,
+                  description,
+                  isArchived,
                   createdAt,
-                  sender:User(*),
-                  attachments:MessageAttachment (*)
-                ),
-      
-                conversationParticipants:ConversationParticipant (
-                  id,
-                  userId,
-                  role,
-                  isActive,
-                  joinedAt,
-                  user:User(*)
+                  updatedAt,
+                  latest_message:Message!Conversation_lastMessageId_fkey (
+                    id,
+                    conversationId,
+                    senderId,
+                    content,
+                    messageType,
+                    status,
+                    isDeleted,
+                    createdAt,
+                    sender:User(*),
+                    attachments:MessageAttachment(*)
+                  ),
+                  participants:ConversationParticipant (
+                    id,
+                    userId,
+                    role,
+                    isActive,
+                    joinedAt,
+                    user:User(*)
+                  )
                 )
-              )
-            `
-                    )
+              `)
                     .eq("userId", user.id)
-                    .eq("isActive", true)
-                    // Sort only the nested messages by createdAt desc
-                    .order("createdAt", {
-                        ascending: false,
-                        foreignTable: "conversation.messages",
-                    })
-                    // Limit the nested messages to just the top 1
-                    .limit(1, { foreignTable: "conversation.messages" });
-
+                    .eq("isActive", true);
 
             if (participantsError) throw participantsError;
+            console.log("Participants:", participants);
 
-            // participants will be an array of ConversationParticipant rows;
-            // each contains a "conversation" field with the actual conversation details
-            if (participants) {
-                // Extract the conversations from each participant object
-                console.log("Conversation : ", participants)
-                // const conversations = participants.map((p) => p.conversation);
-                // Filter participants to only those with a conversation and extract the conversation
-                // const conversations = participants
-                //     .filter((p) => p.conversation)
-                //     .map((p) => p.conversation);
-
-                // const conversations = participants.flatMap((p) => p.conversation) as Conversation[];
-                const conversations = participants.flatMap((p) => {
-                    // Check if conversation is an array; if so, process each one
-                    if (Array.isArray(p.conversation)) {
-                        return p.conversation.map((convo: any) => {
-                            // Map over messages to fix the sender field
-                            const fixedMessages = convo.messages?.map((m: any) => ({
-                                ...m,
-                                // If m.sender is an array, take the first element; otherwise keep it as is
-                                sender: Array.isArray(m.sender) ? m.sender[0] : m.sender,
-                            })) || [];
-
-                            return {
-                                ...convo,
-                                messages: fixedMessages,
-                            };
-                        });
-                    }
-                    return [];
-                }) as Conversation[];
-
-                set({ conversations });
-
-                // set({ conversations });
-
-
-                // console.log("participant: ", conversations)
-                // set({ conversations });
-
-                console.log("Participants : ", conversations)
-                // set({ conversations });
-
-                // Build a dictionary of latest messages per conversation
-                // const latestMessages: Record<string, Message> = {};
-                // for (const p of participants) {
-                //     console.log("P : ", p)
-                //     const convo = p.conversation;
-                //     console.log("Convo : ", convo)
-                //     // convo.messages is an array with at most 1 element (the latest)
-                //     const [latest] = convo?.messages || [];
-                //     if (latest) {
-                //         latestMessages[convo?.id] = latest;
-                //     }
-                // }
-                // set({ latestMessages });
-
-                // Build a dictionary of latest messages per conversation
-                const latestMessages: Record<string, Message> = {};
-                for (const p of participants) {
-                    console.log("P: ", p);
-                    // Ensure p.conversation is a single object rather than an array
-                    const convo = Array.isArray(p.conversation) ? p.conversation[0] : p.conversation;
-                    console.log("Convo: ", convo);
-                    // Ensure that convo exists and has a messages property
-                    if (convo && convo.messages) {
-                        // convo.messages is an array with at most 1 element (the latest)
-                        const [latest] = convo.messages || [];
-                        if (latest) {
-                            // Fix the sender field: if sender is an array, take the first element
-                            const fixedLatest: Message = {
-                                ...latest,
-                                sender: Array.isArray(latest.sender) ? latest.sender[0] : latest.sender,
-                            };
-                            latestMessages[convo.id] = fixedLatest;
-                        }
-                    }
+            // Transform participants data to a flat array of Conversation objects
+            const flattenedConversations: Conversation[] = [];
+            participants?.forEach((p: any) => {
+                if (p.conversation) {
+                    // If conversation is an array, iterate; otherwise, wrap it in an array
+                    const convos = Array.isArray(p.conversation)
+                        ? p.conversation
+                        : [p.conversation];
+                    convos.forEach((c: any) => {
+                        // Build the conversation object according to your type
+                        const conversation: Conversation = {
+                            id: c.id,
+                            organizationId: c.organizationId,
+                            type: c.type,
+                            title: c.title,
+                            description: c.description,
+                            isArchived: c.isArchived,
+                            createdAt: c.createdAt,
+                            updatedAt: c.updatedAt,
+                            // Map latest_message to latestMessage and pick the first if it’s an array
+                            latest_message: c.latest_message || null,
+                            // Ensure participants field is provided
+                            participants: c.participants || [],
+                        };
+                        flattenedConversations.push(conversation);
+                    });
                 }
-                set({ latestMessages });
+            });
 
+            console.log("Flattened Conversations:", flattenedConversations);
+            set({ conversations: flattenedConversations });
 
-                // Optionally, fetch unread counts if you want them in the same flow:
-                await get().fetchUnreadCounts();
-            }
+            // Build a dictionary for quick lookup of the latest message per conversation
+            const latestMessages: Record<string, Message> = {};
+            flattenedConversations.forEach((convo) => {
+                if (convo.latest_message) {
+                    latestMessages[convo.id!] = convo.latest_message;
+                }
+            });
+            set({ latestMessages });
+
+            // Optionally, fetch unread counts
+            await get().fetchUnreadCounts();
         } catch (error) {
             console.error("Error fetching conversations:", error);
         } finally {
-            set({ isLoadingConversations: false });
-            set({ isLoadingChannels: false });
-            set({ isLoadingDirectMessages: false });
+            set({
+                isLoadingConversations: false,
+                isLoadingChannels: false,
+                isLoadingDirectMessages: false,
+            });
         }
     },
+
 
     selectConversation: async (conversationId: string) => {
         const { conversations } = get();
@@ -402,6 +645,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 }));
                 return;
             }
+
+            const { error: updateError } = await supabaseBrowserClient
+                .from("Conversation")
+                .update({ lastMessageId: data.id })
+                .eq("id", conversationId);
+
+            console.log("Update Error : ", updateError)
 
             if (data) {
                 // Replace the optimistic message with the real one

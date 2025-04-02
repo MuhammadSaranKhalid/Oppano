@@ -1,3 +1,9 @@
+// Base types for reusability
+export interface BaseEntity {
+    id: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
 
 export enum OrgMemberRole {
     OWNER = "OWNER",
@@ -31,28 +37,21 @@ export enum MessageStatus {
     READ = "READ",
 }
 
-export interface User {
-    id: string
+export interface User extends BaseEntity {
     username: string
     email: string
     profilePicture?: string
     phone?: string
     bio?: string
     lastActive: Date
-    createdAt: Date
-    updatedAt: Date
 }
 
-export interface Organization {
-    id: string
+export interface Organization extends BaseEntity {
     name: string
     domain?: string
-    createdAt: Date
-    updatedAt: Date
 }
 
-export interface OrganizationUser {
-    id: string
+export interface OrganizationUser extends BaseEntity {
     organizationId: string
     userId: string
     role: OrgMemberRole
@@ -61,23 +60,20 @@ export interface OrganizationUser {
     user?: User
 }
 
-export interface Conversation {
-    id?: string
+export interface Conversation extends BaseEntity {
     organizationId?: string
     type?: ConversationType
     title?: string
     description?: string
     isArchived?: boolean
-    lastMessageId?: string
-    createdAt?: Date
-    updatedAt?: Date
-    conversationParticipants?: ConversationParticipant[]
-    messages?: Message[]
-    organization?: Organization
+    // lastMessageId?: string
+    latest_message?: Message
+    participants?: ConversationParticipant[]
+    // messages?: Message[]
+    // organization?: Organization
 }
 
-export interface ConversationParticipant {
-    id: string
+export interface ConversationParticipant extends BaseEntity {
     conversationId: string
     userId: string
     role: ConversationParticipantRole
@@ -89,29 +85,25 @@ export interface ConversationParticipant {
     user?: User
 }
 
-export interface Message {
-    id?: string
+export interface Message extends BaseEntity {
     conversationId?: string
     senderId?: string
     content?: string
     messageType?: MessageType
-    parentMessageId?: string
-    forwardedFromMessageId?: string
-    createdAt?: Date
-    updatedAt?: Date
+    // parentMessageId?: string
+    // forwardedFromMessageId?: string
     status?: MessageStatus
     isDeleted?: boolean
-    conversation?: Conversation
+    // conversation?: Conversation
     sender?: User
-    parentMessage?: Message
-    forwardedFrom?: Message
+    // parentMessage?: Message
+    // forwardedFrom?: Message
     attachments?: Attachments[]
-    childMessages?: Message[]
-    forwardedMessages?: Message[]
+    // childMessages?: Message[]
+    // forwardedMessages?: Message[]
 }
 
-export interface Attachments {
-    id: string
+export interface Attachments extends BaseEntity {
     fileSize: number
     fileType: string
     fileUrl: string

@@ -164,7 +164,7 @@ export function getConversationLabel(
     if (conversation.type === ConversationType.PRIVATE && !isSelfChat) {
         // For a private chat, show the other user's name
         // conversationParticipants is an array
-        const otherParticipant = conversation.conversationParticipants?.find(
+        const otherParticipant = conversation.participants?.find(
             (p: any) => p.userId !== currentUserId
         );
         // Use the other participant’s username if it exists
