@@ -34,10 +34,7 @@ export default function RootLayout({
                 authProvider={authProviderClient}
                 dataProvider={dataProvider}
                 resources={[
-                  {
-                    name: "chat",
-                    list: "/chat",
-                  },
+                  
                   // {
                   //   name: "blog_posts",
                   //   list: "/blog-posts",
