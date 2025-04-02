@@ -1,4 +1,4 @@
-import { Attachments } from './index';
+
 export enum OrgMemberRole {
     OWNER = "OWNER",
     ADMIN = "ADMIN",
@@ -62,15 +62,15 @@ export interface OrganizationUser {
 }
 
 export interface Conversation {
-    id: string
-    organizationId: string
-    type: ConversationType
+    id?: string
+    organizationId?: string
+    type?: ConversationType
     title?: string
     description?: string
-    isArchived: boolean
+    isArchived?: boolean
     lastMessageId?: string
-    createdAt: Date
-    updatedAt: Date
+    createdAt?: Date
+    updatedAt?: Date
     conversationParticipants?: ConversationParticipant[]
     messages?: Message[]
     organization?: Organization
@@ -90,22 +90,22 @@ export interface ConversationParticipant {
 }
 
 export interface Message {
-    id: string
-    conversationId: string
+    id?: string
+    conversationId?: string
     senderId?: string
     content?: string
-    messageType: MessageType
+    messageType?: MessageType
     parentMessageId?: string
     forwardedFromMessageId?: string
-    createdAt: Date
+    createdAt?: Date
     updatedAt?: Date
-    status: MessageStatus
-    isDeleted: boolean
+    status?: MessageStatus
+    isDeleted?: boolean
     conversation?: Conversation
     sender?: User
     parentMessage?: Message
     forwardedFrom?: Message
-    attachments: Attachments[]
+    attachments?: Attachments[]
     childMessages?: Message[]
     forwardedMessages?: Message[]
 }

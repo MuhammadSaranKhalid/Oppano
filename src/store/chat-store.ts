@@ -1,6 +1,6 @@
 import { supabaseBrowserClient } from "@/utils/supabase/client";
 import { create } from "zustand";
-import type { Conversation, Message, User } from "@/types";
+import { MessageStatus, type Conversation, type Message, type User } from "@/types";
 
 // Update the ChatState interface to include latestMessages
 interface ChatState {
@@ -66,14 +66,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
             }
 
             // Get the public URL for the uploaded file
-            const { data: { publicUrl }, error: urlError } = await supabaseBrowserClient.storage
+            const { data: { publicUrl } } = await supabaseBrowserClient.storage
                 .from("oppano")
                 .getPublicUrl(filePath);
 
-            if (urlError || !publicUrl) {
-                console.error("Error getting public URL:", urlError);
-                return;
-            }
+            // if (urlError || !publicUrl) {
+            //     console.error("Error getting public URL:", urlError);
+            //     return;
+            // }
 
             // Insert a new Message record with messageType "FILE" and optional caption in content
             const { data: messageData, error: messageError } = await supabaseBrowserClient
@@ -213,20 +213,82 @@ export const useChatStore = create<ChatState>((set, get) => ({
             // each contains a "conversation" field with the actual conversation details
             if (participants) {
                 // Extract the conversations from each participant object
-                const conversations = participants.map((p) => p.conversation);
+                console.log("Conversation : ", participants)
+                // const conversations = participants.map((p) => p.conversation);
+                // Filter participants to only those with a conversation and extract the conversation
+                // const conversations = participants
+                //     .filter((p) => p.conversation)
+                //     .map((p) => p.conversation);
+
+                // const conversations = participants.flatMap((p) => p.conversation) as Conversation[];
+                const conversations = participants.flatMap((p) => {
+                    // Check if conversation is an array; if so, process each one
+                    if (Array.isArray(p.conversation)) {
+                        return p.conversation.map((convo: any) => {
+                            // Map over messages to fix the sender field
+                            const fixedMessages = convo.messages?.map((m: any) => ({
+                                ...m,
+                                // If m.sender is an array, take the first element; otherwise keep it as is
+                                sender: Array.isArray(m.sender) ? m.sender[0] : m.sender,
+                            })) || [];
+
+                            return {
+                                ...convo,
+                                messages: fixedMessages,
+                            };
+                        });
+                    }
+                    return [];
+                }) as Conversation[];
+
                 set({ conversations });
+
+                // set({ conversations });
+
+
+                // console.log("participant: ", conversations)
+                // set({ conversations });
+
+                console.log("Participants : ", conversations)
+                // set({ conversations });
+
+                // Build a dictionary of latest messages per conversation
+                // const latestMessages: Record<string, Message> = {};
+                // for (const p of participants) {
+                //     console.log("P : ", p)
+                //     const convo = p.conversation;
+                //     console.log("Convo : ", convo)
+                //     // convo.messages is an array with at most 1 element (the latest)
+                //     const [latest] = convo?.messages || [];
+                //     if (latest) {
+                //         latestMessages[convo?.id] = latest;
+                //     }
+                // }
+                // set({ latestMessages });
 
                 // Build a dictionary of latest messages per conversation
                 const latestMessages: Record<string, Message> = {};
                 for (const p of participants) {
-                    const convo = p.conversation;
-                    // convo.messages is an array with at most 1 element (the latest)
-                    const [latest] = convo.messages || [];
-                    if (latest) {
-                        latestMessages[convo.id] = latest;
+                    console.log("P: ", p);
+                    // Ensure p.conversation is a single object rather than an array
+                    const convo = Array.isArray(p.conversation) ? p.conversation[0] : p.conversation;
+                    console.log("Convo: ", convo);
+                    // Ensure that convo exists and has a messages property
+                    if (convo && convo.messages) {
+                        // convo.messages is an array with at most 1 element (the latest)
+                        const [latest] = convo.messages || [];
+                        if (latest) {
+                            // Fix the sender field: if sender is an array, take the first element
+                            const fixedLatest: Message = {
+                                ...latest,
+                                sender: Array.isArray(latest.sender) ? latest.sender[0] : latest.sender,
+                            };
+                            latestMessages[convo.id] = fixedLatest;
+                        }
                     }
                 }
                 set({ latestMessages });
+
 
                 // Optionally, fetch unread counts if you want them in the same flow:
                 await get().fetchUnreadCounts();
@@ -366,11 +428,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 .eq("id", messageId);
 
             // Update the message in the local state
+            // set((state) => ({
+            //     messages: state.messages.map((m) =>
+            //         m.id === messageId ? { ...m, status: "READ" } : m
+            //     ),
+            // }));
             set((state) => ({
                 messages: state.messages.map((m) =>
-                    m.id === messageId ? { ...m, status: "READ" } : m
+                    m.id === messageId
+                        ? { ...m, status: MessageStatus.READ } as Message
+                        : m
                 ),
             }));
+
         } catch (error) {
             console.error("Error marking message as read:", error);
         }
