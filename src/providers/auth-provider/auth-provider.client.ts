@@ -1,15 +1,13 @@
 "use client";
 
 import type { AuthProvider } from "@refinedev/core";
-import { supabaseBrowserClient } from "@utils/supabase/client";
+import { supabaseBrowserClient } from "@/utils/supabase/client";
 
 export const authProviderClient: AuthProvider = {
-  login: async ({ email, password }) => {
+  login: async (values) => {
+
     const { data, error } = await supabaseBrowserClient.auth.signInWithPassword(
-      {
-        email,
-        password,
-      }
+      values
     );
 
     if (error) {
@@ -52,12 +50,11 @@ export const authProviderClient: AuthProvider = {
       redirectTo: "/login",
     };
   },
-  register: async ({ email, password }) => {
+  register: async (values) => {
     try {
-      const { data, error } = await supabaseBrowserClient.auth.signUp({
-        email,
-        password,
-      });
+      const { data, error } = await supabaseBrowserClient.auth.signUp(
+        values,
+      );
 
       if (error) {
         return {
